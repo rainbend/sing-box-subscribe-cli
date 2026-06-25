@@ -59,6 +59,34 @@ sing-box-sub version
 
 release 构建会输出它对应的 Git tag。
 
+## 容器镜像
+
+容器镜像发布到 GitHub Packages：
+
+```bash
+docker pull ghcr.io/rainbend/sing-box-subscribe-cli:latest
+docker pull ghcr.io/rainbend/sing-box-subscribe-cli:v0.1.0
+```
+
+镜像支持 `linux/amd64` 和 `linux/arm64`。
+
+把当前目录挂载到容器的 `/work` 后运行 CLI：
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  ghcr.io/rainbend/sing-box-subscribe-cli:latest \
+  ./subscription.yaml --out config.json
+```
+
+从源码构建本地镜像：
+
+```bash
+docker build \
+  --build-arg VERSION=dev \
+  -t sing-box-subscribe-cli:dev .
+```
+
 ## 从源码构建
 
 要求：
@@ -213,7 +241,9 @@ git push origin v0.1.0
 
 release workflow 会运行测试，交叉编译 Linux、macOS 和 Windows 的 `amd64`、`arm64` 二进制文件，把 tag 注入 `sing-box-sub version`，并上传到 GitHub Releases。
 
-合并请求会运行 CI workflow，执行测试并确认同一套目标矩阵可以正常编译。
+container workflow 会构建多架构镜像并推送到 GitHub Packages。tag 会发布 `<version>` 和 `latest`；推送到 `main` 会发布 `main` 和 `sha-...` tag。
+
+合并请求和推送到 `main` 会运行 CI workflow，执行测试并确认同一套目标矩阵可以正常编译。
 
 ## 隐私和 fixture
 

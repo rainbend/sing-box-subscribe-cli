@@ -59,6 +59,34 @@ sing-box-sub version
 
 Release builds print the Git tag they were built from.
 
+## Container image
+
+Container images are published to GitHub Packages:
+
+```bash
+docker pull ghcr.io/rainbend/sing-box-subscribe-cli:latest
+docker pull ghcr.io/rainbend/sing-box-subscribe-cli:v0.1.0
+```
+
+The image supports `linux/amd64` and `linux/arm64`.
+
+Run the CLI in a container with the current directory mounted as `/work`:
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  ghcr.io/rainbend/sing-box-subscribe-cli:latest \
+  ./subscription.yaml --out config.json
+```
+
+Build a local image from source:
+
+```bash
+docker build \
+  --build-arg VERSION=dev \
+  -t sing-box-subscribe-cli:dev .
+```
+
 ## Build from source
 
 Requirements:
@@ -213,7 +241,9 @@ git push origin v0.1.0
 
 The release workflow runs tests, cross-compiles Linux, macOS, and Windows binaries for `amd64` and `arm64`, injects the tag into `sing-box-sub version`, and uploads the binaries to GitHub Releases.
 
-Pull requests run the CI workflow, which tests the project and verifies the same target matrix can compile.
+The container workflow builds and pushes multi-architecture images to GitHub Packages. Tags publish `<version>` and `latest`; pushes to `main` publish `main` and a `sha-...` tag.
+
+Pull requests and pushes to `main` run the CI workflow, which tests the project and verifies the same target matrix can compile.
 
 ## Privacy and fixtures
 
