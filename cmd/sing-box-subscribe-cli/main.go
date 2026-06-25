@@ -15,6 +15,8 @@ import (
 
 const defaultTemplate = "sb-config-1.14.json"
 
+var version = "dev"
+
 func main() {
 	if err := executeRootCommand(context.Background(), os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		os.Exit(1)
@@ -79,7 +81,7 @@ func newRootCommand() *cobra.Command {
 	flags.BoolVar(&opts.OnlyNodes, "only-nodes", false, "write only generated outbounds instead of merging a template")
 	flags.DurationVar(&timeout, "timeout", 60*time.Second, "HTTP request timeout")
 
-	cmd.AddCommand(newListCommand())
+	cmd.AddCommand(newListCommand(), newVersionCommand())
 	return cmd
 }
 
@@ -159,4 +161,16 @@ func listTemplates(cmd *cobra.Command) error {
 		fmt.Fprintln(stdout, name)
 	}
 	return nil
+}
+
+func newVersionCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print version",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Fprintln(cmd.OutOrStdout(), version)
+			return nil
+		},
+	}
 }

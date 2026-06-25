@@ -19,6 +19,19 @@ func TestListCommand(t *testing.T) {
 	}
 }
 
+func TestVersionCommand(t *testing.T) {
+	stdout, stderr, err := executeCommand("version")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "dev\n" {
+		t.Fatalf("stdout = %q, want dev version", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr = %q, want empty", stderr)
+	}
+}
+
 func TestRootErrorPrintsHelpAndError(t *testing.T) {
 	stdout, stderr, err := executeCommand()
 	if err == nil {
