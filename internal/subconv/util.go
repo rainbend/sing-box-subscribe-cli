@@ -283,6 +283,10 @@ func protocolOf(value string) string {
 func normalizedProtocol(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
 	switch value {
+	case "shadowsocks":
+		return "ss"
+	case "shadowsocksr":
+		return "ssr"
 	case "hy2":
 		return "hysteria2"
 	case "wireguard":

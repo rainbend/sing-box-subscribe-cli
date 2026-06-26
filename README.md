@@ -13,7 +13,7 @@ English | [简体中文](README.zh-CN.md)
 
 - Read subscriptions from HTTP/HTTPS URLs or local files.
 - Parse common Clash YAML subscriptions with a `proxies` list.
-- Convert Clash `vmess` and `hysteria2` nodes to sing-box outbounds.
+- Convert Clash `vmess`, `vless`, `trojan`, `ss`, `ssr`, `hysteria`, `hysteria2`, `tuic`, `wireguard`, `socks5`, `http`, and `anytls` nodes to sing-box outbounds.
 - Reuse existing sing-box `outbounds` from a subscription source.
 - Merge generated nodes into bundled sing-box JSON templates.
 - Expand `{all}` in selector and urltest outbound lists.

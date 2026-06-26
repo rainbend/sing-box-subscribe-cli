@@ -31,6 +31,50 @@ proxies:
 	}
 }
 
+func TestClashAdditionalProtocols(t *testing.T) {
+	input := []byte(`
+proxies:
+  - { name: SS, type: ss, server: ss.example.com, port: 8388, cipher: aes-128-gcm, password: pass }
+  - { name: SSR, type: ssr, server: ssr.example.com, port: 8388, protocol: origin, cipher: aes-128-gcm, obfs: plain, password: pass }
+  - { name: Trojan, type: trojan, server: trojan.example.com, port: 443, password: pass, sni: trojan.example.com }
+  - { name: VLESS, type: vless, server: vless.example.com, port: 443, uuid: 00000000-0000-0000-0000-000000000000, tls: true, network: ws, ws-opts: { path: /ws, headers: { Host: edge.example.com } } }
+  - { name: HY, type: hysteria, server: hy.example.com, port: 443, auth-str: pass, up: 10, down: 20, sni: hy.example.com }
+  - { name: TUIC, type: tuic, server: tuic.example.com, port: 443, uuid: 00000000-0000-0000-0000-000000000000, password: pass, sni: tuic.example.com }
+  - { name: WG, type: wireguard, server: wg.example.com, port: 51820, private-key: private, public-key: public, ip: 172.16.0.2, reserved: [1, 2, 3] }
+  - { name: SOCKS, type: socks5, server: socks.example.com, port: 1080, username: user, password: pass }
+  - { name: HTTP, type: http, server: http.example.com, port: 8080, username: user, password: pass }
+  - { name: AnyTLS, type: anytls, server: any.example.com, port: 443, password: pass, sni: any.example.com }
+`)
+	nodes, warnings, err := ParseSubscription(input, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("unexpected warnings: %v", warnings)
+	}
+	wantTypes := map[string]int{
+		"shadowsocks":  1,
+		"shadowsocksr": 1,
+		"trojan":       1,
+		"vless":        1,
+		"hysteria":     1,
+		"tuic":         1,
+		"wireguard":    1,
+		"socks":        1,
+		"http":         1,
+		"anytls":       1,
+	}
+	gotTypes := typeCounts(nodes)
+	for typ, want := range wantTypes {
+		if gotTypes[typ] != want {
+			t.Fatalf("type %s count = %d, want %d; nodes=%#v", typ, gotTypes[typ], want, nodes)
+		}
+	}
+	if gotTypes["trojan"] != 1 {
+		t.Fatalf("trojan node not parsed: %#v", nodes)
+	}
+}
+
 func TestMergeTemplateExpandsAllWithFilter(t *testing.T) {
 	template := map[string]any{
 		"outbounds": []any{
@@ -67,4 +111,12 @@ func TestMergeTemplateExpandsAllWithFilter(t *testing.T) {
 	if _, exists := japan["filter"]; exists {
 		t.Fatalf("filter should be removed after expansion")
 	}
+}
+
+func typeCounts(nodes []outbound) map[string]int {
+	counts := map[string]int{}
+	for _, node := range nodes {
+		counts[stringValue(node, "type")]++
+	}
+	return counts
 }

@@ -15,7 +15,7 @@
 
 - 支持拉取 HTTP/HTTPS 订阅，也支持读取本地订阅文件。
 - 支持解析常见 Clash YAML `proxies` 格式。
-- 已实现 Clash `vmess` 和 `hysteria2` 到 sing-box outbound 的转换。
+- 已实现 Clash `vmess`、`vless`、`trojan`、`ss`、`ssr`、`hysteria`、`hysteria2`、`tuic`、`wireguard`、`socks5`、`http` 和 `anytls` 到 sing-box outbound 的转换。
 - 支持已有 sing-box `outbounds` 输入，跳过 `selector`、`urltest`、`direct`、`block`、`dns` 等模板型 outbound。
 - 支持模板中的 `{all}` 占位符展开。
 - 支持 selector/urltest 上的 `filter` 规则，规则展开后会移除 `filter` 字段。
@@ -46,7 +46,7 @@
 - `internal/subconv/parse.go`: 订阅内容识别和分发。
 - `internal/subconv/clash.go`: Clash proxy 到 sing-box outbound 的转换。
 - `internal/subconv/template.go`: 模板 `{all}` 展开和 outbound 合并。
-- `internal/subconv/uri.go`: URI 订阅解析，目前覆盖 `vmess` 和 `hysteria2`。
+- `internal/subconv/uri.go`: URI 订阅解析，覆盖 `vmess`、`vless`、`trojan`、`ss`、`ssr`、`hysteria`、`hysteria2`/`hy2`、`tuic`、`wg`/`wireguard`、`socks`/`socks5`、`http`/`http2`/`https` 和 `anytls`。
 - `internal/templates/`: 内置模板和模板列表/读取逻辑。
 
 ## 常用命令
