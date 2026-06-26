@@ -3,74 +3,102 @@
 [![CI](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/ci.yml)
 [![Release](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/release.yml/badge.svg)](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/release.yml)
 
-Pure Go command-line tool for generating a final `config.json` for [sing-box](https://sing-box.sagernet.org/) from a subscription source and a JSON template.
+Generate a ready-to-use [sing-box](https://sing-box.sagernet.org/) `config.json` from a subscription URL or local subscription file.
 
 English | [简体中文](README.zh-CN.md)
 
-## What it does
+`sing-box-subscribe-cli` is a small, pure Go command-line tool. It is useful for local scripts, servers, CI jobs, and any workflow where you want to turn a subscription into a sing-box configuration without running a web service.
 
-`sing-box-subscribe-cli` is a focused CLI extracted from the original Python `sing-box-subscribe` workflow. It is designed for local automation, CI jobs, and small scripts that need to turn a subscription into a ready-to-use sing-box configuration.
+## Features
 
-It currently supports:
+- Read subscriptions from HTTP/HTTPS URLs or local files.
+- Parse common Clash YAML subscriptions with a `proxies` list.
+- Convert Clash `vmess` and `hysteria2` nodes to sing-box outbounds.
+- Reuse existing sing-box `outbounds` from a subscription source.
+- Merge generated nodes into bundled sing-box JSON templates.
+- Expand `{all}` in selector and urltest outbound lists.
+- Support selector/urltest `filter` rules in templates.
+- Filter nodes by protocol or name.
+- Add a prefix to generated node tags.
+- Output only generated nodes when you do not want to merge a template.
 
-- HTTP/HTTPS subscription URLs and local subscription files.
-- Clash YAML subscriptions with a `proxies` list.
-- Clash `vmess` and `hysteria2` nodes.
-- Existing sing-box `outbounds` input.
-- Built-in sing-box JSON templates.
-- `{all}` expansion in template selector and urltest outbound lists.
-- selector/urltest `filter` rules, removed after expansion.
-- Node filtering with `--exclude-protocol` and `--exclude-node-name`.
-- Tag prefixing with `--prefix`.
-- Node-only output with `--only-nodes`.
-- WireGuard outbound migration to top-level `endpoints`, matching the original Python behavior.
+This tool generates configuration files. It does not run sing-box for you.
 
-This project is intentionally not a full web service. It only provides the CLI path needed to produce sing-box configuration files.
+## Quick Start
 
-## Download
-
-Prebuilt binaries are published on the [GitHub Releases page](https://github.com/rainbend/sing-box-subscribe-cli/releases).
-
-Each tagged release includes binaries for:
-
-| Platform | Architecture | Asset name pattern |
-| --- | --- | --- |
-| Linux | x86_64 | `sing-box-sub_<version>_linux_amd64` |
-| Linux | arm64 | `sing-box-sub_<version>_linux_arm64` |
-| macOS | Intel | `sing-box-sub_<version>_macos_amd64` |
-| macOS | Apple Silicon | `sing-box-sub_<version>_macos_arm64` |
-| Windows | x86_64 | `sing-box-sub_<version>_windows_amd64.exe` |
-| Windows | arm64 | `sing-box-sub_<version>_windows_arm64.exe` |
-
-On Linux or macOS, make the downloaded binary executable and move it into your `PATH`:
+Install the CLI, then generate a config from a subscription:
 
 ```bash
-chmod +x sing-box-sub_v0.1.0_linux_amd64
-sudo mv sing-box-sub_v0.1.0_linux_amd64 /usr/local/bin/sing-box-sub
+sing-box-sub \
+  'https://example.com/api/v1/client/subscribe?token=REDACTED' \
+  --out config.json
 ```
 
-On Windows, download the matching `.exe`, optionally rename it to `sing-box-sub.exe`, and place it in a directory listed in `PATH`.
+Validate the result when the tools are available:
 
-Check the installed version:
+```bash
+jq empty config.json
+sing-box check -c config.json
+```
+
+## Install
+
+### macOS
+
+Install with Homebrew:
+
+```bash
+brew install rainbend/tap/sing-box-subscribe-cli
+```
+
+Check the installed command:
 
 ```bash
 sing-box-sub version
 ```
 
-Release builds print the Git tag they were built from.
+### Linux
 
-## Container image
+Install the latest release:
 
-Container images are published to GitHub Packages:
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | bash
+```
+
+The installer supports `linux/amd64` and `linux/arm64`. It installs `sing-box-sub` to `/usr/local/bin` by default and may ask for `sudo`.
+
+Install to a custom directory:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | INSTALL_DIR="$HOME/.local/bin" bash
+```
+
+Install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | VERSION=v1.0.0 bash
+```
+
+### Windows
+
+Download the matching `.exe` from the [GitHub Releases page](https://github.com/rainbend/sing-box-subscribe-cli/releases), rename it to `sing-box-sub.exe` if you like, and place it in a directory listed in `PATH`.
+
+Check the installed command:
+
+```powershell
+sing-box-sub.exe version
+```
+
+### Container
+
+Pull the image from GitHub Packages:
 
 ```bash
 docker pull ghcr.io/rainbend/sing-box-subscribe-cli:latest
-docker pull ghcr.io/rainbend/sing-box-subscribe-cli:v0.1.0
+docker pull ghcr.io/rainbend/sing-box-subscribe-cli:v1.0.0
 ```
 
-The image supports `linux/amd64` and `linux/arm64`.
-
-Run the CLI in a container with the current directory mounted as `/work`:
+Run the CLI with the current directory mounted as `/work`:
 
 ```bash
 docker run --rm \
@@ -79,50 +107,11 @@ docker run --rm \
   ./subscription.yaml --out config.json
 ```
 
-Build a local image from source:
-
-```bash
-docker build \
-  --build-arg VERSION=dev \
-  -t sing-box-subscribe-cli:dev .
-```
-
-## Build from source
-
-Requirements:
-
-- Go 1.24 or newer.
-- `make`, optional but recommended.
-
-Clone and build:
-
-```bash
-git clone https://github.com/rainbend/sing-box-subscribe-cli.git
-cd sing-box-subscribe-cli
-make build
-```
-
-The binary is written to:
-
-```bash
-./bin/sing-box-sub
-```
-
-You can also build directly with Go:
-
-```bash
-go build -o ./bin/sing-box-sub ./cmd/sing-box-subscribe-cli
-```
-
-Run tests:
-
-```bash
-go test ./...
-```
+The image supports `linux/amd64` and `linux/arm64`.
 
 ## Usage
 
-Generate `config.json` from a subscription URL:
+Generate from a subscription URL:
 
 ```bash
 sing-box-sub \
@@ -130,7 +119,7 @@ sing-box-sub \
   --out config.json
 ```
 
-The subscription source can also be passed with `--url`:
+You can also pass the source with `--url`:
 
 ```bash
 sing-box-sub \
@@ -144,13 +133,7 @@ Generate from a local subscription file:
 sing-box-sub ./subscription.yaml --out config.json
 ```
 
-Write only generated outbounds instead of merging a template:
-
-```bash
-sing-box-sub ./subscription.yaml --only-nodes --out nodes.json
-```
-
-Use a different built-in template:
+Use another bundled template:
 
 ```bash
 sing-box-sub ./subscription.yaml \
@@ -158,7 +141,7 @@ sing-box-sub ./subscription.yaml \
   --out config.json
 ```
 
-Use a template file or URL:
+Use your own template file:
 
 ```bash
 sing-box-sub ./subscription.yaml \
@@ -166,7 +149,13 @@ sing-box-sub ./subscription.yaml \
   --out config.json
 ```
 
-Filter and rename generated nodes:
+Write only generated outbounds:
+
+```bash
+sing-box-sub ./subscription.yaml --only-nodes --out nodes.json
+```
+
+Filter or rename generated nodes:
 
 ```bash
 sing-box-sub ./subscription.yaml \
@@ -176,14 +165,7 @@ sing-box-sub ./subscription.yaml \
   --out config.json
 ```
 
-Validate the generated file when the tools are available:
-
-```bash
-jq empty config.json
-sing-box check -c config.json
-```
-
-## Built-in templates
+## Templates
 
 List bundled templates:
 
@@ -191,7 +173,7 @@ List bundled templates:
 sing-box-sub list
 ```
 
-Current templates:
+Bundled templates:
 
 - `config_template_groups_rule_set_tun.json`
 - `config_template_groups_rule_set_tun_fakeip.json`
@@ -199,15 +181,13 @@ Current templates:
 - `sb-config-1.12.json`
 - `sb-config-1.14.json`
 
-The default template is:
+The default template is `sb-config-1.14.json`.
 
-```text
-sb-config-1.14.json
-```
+When `--template` is a bundled template name, the bundled template is used first. Template paths such as `./template.json` and `/path/to/template.json` are also supported, as are HTTP/HTTPS template URLs.
 
-When `--template` is set to a built-in template name, the bundled template is used first. Explicit paths such as `./template.json`, `/path/to/template.json`, and HTTP/HTTPS URLs are also supported.
+The bundled templates and rule layout are inspired by [Toperlock/sing-box-subscribe](https://github.com/Toperlock/sing-box-subscribe).
 
-## Command reference
+## Command Reference
 
 ```text
 sing-box-sub [subscription URL or file] [flags]
@@ -221,33 +201,62 @@ Common flags:
 | --- | --- | --- |
 | `--url` | empty | Subscription URL or local subscription file. |
 | `--template` | `sb-config-1.14.json` | Template name, template path, or template URL. |
-| `--out` | `config.json` | Output config path, or `-` for stdout. |
+| `--out` | `config.json` | Output file path. Use `-` for stdout. |
 | `--tag` | `tag_1` | Subscription group tag. |
 | `--ua` | `clashmeta` | User-Agent for subscription and template HTTP requests. |
-| `--prefix` | empty | Prefix added to generated outbound tags. |
-| `--exclude-protocol` | `ssr` | Comma-separated protocols to skip. |
-| `--exclude-node-name` | empty | Comma or pipe separated substrings to skip by node tag. |
-| `--only-nodes` | `false` | Write only generated outbounds instead of merging a template. |
+| `--prefix` | empty | Prefix for generated outbound tags. |
+| `--exclude-protocol` | `ssr` | Protocols to skip, separated by commas. |
+| `--exclude-node-name` | empty | Node tag substrings to skip, separated by commas or `|`. |
+| `--only-nodes` | `false` | Write generated outbounds only. |
 | `--timeout` | `60s` | HTTP request timeout. |
 
-## Release process
+## Build From Source
+
+Requirements:
+
+- Go 1.24 or newer
+- `make`, optional
+
+Build:
+
+```bash
+git clone https://github.com/rainbend/sing-box-subscribe-cli.git
+cd sing-box-subscribe-cli
+make build
+```
+
+The binary is written to `./bin/sing-box-sub`.
+
+Run tests:
+
+```bash
+go test ./...
+```
+
+Build a local container image:
+
+```bash
+docker build \
+  --build-arg VERSION=dev \
+  -t sing-box-subscribe-cli:dev .
+```
+
+## Releases
 
 Maintainers publish a release by pushing a Git tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-The release workflow runs tests, cross-compiles Linux, macOS, and Windows binaries for `amd64` and `arm64`, injects the tag into `sing-box-sub version`, and uploads the binaries to GitHub Releases.
+The release workflow runs tests, builds Linux, macOS, and Windows binaries for `amd64` and `arm64`, injects the tag into `sing-box-sub version`, and uploads the binaries to GitHub Releases.
 
-The container workflow builds and pushes multi-architecture images to GitHub Packages. Tags publish `<version>` and `latest`; pushes to `main` publish `main` and a `sha-...` tag.
+Container images are published to GitHub Packages. Version tags publish `<version>` and `latest`; pushes to `main` publish `main` and a `sha-...` tag.
 
-Pull requests and pushes to `main` run the CI workflow, which tests the project and verifies the same target matrix can compile.
+## Privacy
 
-## Privacy and fixtures
-
-Subscription URLs often contain private tokens. Do not commit real subscription URLs, tokens, or node details to issues, documentation, tests, or fixtures. Use redacted examples or local fixtures when reproducing behavior.
+Subscription URLs often contain private tokens. Do not share real subscription URLs, tokens, or node details in issues, documentation, tests, or fixtures. Use redacted examples or local fixtures when reproducing behavior.
 
 ## License
 
