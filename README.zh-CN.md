@@ -3,90 +3,102 @@
 [![CI](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/ci.yml)
 [![Release](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/release.yml/badge.svg)](https://github.com/rainbend/sing-box-subscribe-cli/actions/workflows/release.yml)
 
-用于从订阅来源和 JSON 模板生成 [sing-box](https://sing-box.sagernet.org/) 最终 `config.json` 的纯 Go 命令行工具。
+从订阅 URL 或本地订阅文件生成可直接使用的 [sing-box](https://sing-box.sagernet.org/) `config.json`。
 
 [English](README.md) | 简体中文
 
-## 它做什么
+`sing-box-subscribe-cli` 是一个纯 Go 命令行工具，适合本地脚本、服务器、CI 任务，以及任何不想运行 Web 服务、只想把订阅转换成 sing-box 配置的场景。
 
-`sing-box-subscribe-cli` 是从原 Python `sing-box-subscribe` 工作流中拆出的专注型 CLI。它适合本地自动化、CI 任务和脚本场景，用来把订阅转换成可直接使用的 sing-box 配置文件。
+## 功能
 
-当前支持：
+- 从 HTTP/HTTPS URL 或本地文件读取订阅。
+- 解析常见 Clash YAML 订阅中的 `proxies` 列表。
+- 将 Clash `vmess` 和 `hysteria2` 节点转换为 sing-box outbounds。
+- 复用订阅来源中已有的 sing-box `outbounds`。
+- 将生成的节点合并到内置 sing-box JSON 模板。
+- 展开 selector 和 urltest outbound 列表中的 `{all}`。
+- 支持模板中的 selector/urltest `filter` 规则。
+- 按协议或节点名称过滤节点。
+- 给生成的节点 tag 添加前缀。
+- 在不需要模板时，只输出生成的节点。
 
-- HTTP/HTTPS 订阅 URL 和本地订阅文件。
-- 带有 `proxies` 列表的 Clash YAML 订阅。
-- Clash `vmess` 和 `hysteria2` 节点。
-- 已有 sing-box `outbounds` 输入。
-- 内置 sing-box JSON 模板。
-- 模板 selector 和 urltest outbound 列表中的 `{all}` 展开。
-- selector/urltest 的 `filter` 规则，展开后会移除 `filter` 字段。
-- 使用 `--exclude-protocol` 和 `--exclude-node-name` 过滤节点。
-- 使用 `--prefix` 给节点 tag 加前缀。
-- 使用 `--only-nodes` 只输出节点。
-- 按原 Python 行为将 WireGuard outbound 迁移到顶层 `endpoints`。
+这个工具只生成配置文件，不负责运行 sing-box。
 
-这个项目不是完整 Web 服务，只提供生成 sing-box 配置所需的 CLI 路径。
+## 快速开始
 
-## 下载
+安装 CLI，然后从订阅生成配置：
 
-### macOS Homebrew
+```bash
+sing-box-sub \
+  'https://example.com/api/v1/client/subscribe?token=REDACTED' \
+  --out config.json
+```
 
-通过 Homebrew tap 安装预编译 macOS 二进制：
+如果环境里有对应工具，可以校验生成结果：
+
+```bash
+jq empty config.json
+sing-box check -c config.json
+```
+
+## 安装
+
+### macOS
+
+使用 Homebrew 安装：
 
 ```bash
 brew install rainbend/tap/sing-box-subscribe-cli
 ```
 
-安装后的命令是：
+检查安装结果：
 
 ```bash
 sing-box-sub version
 ```
 
-### GitHub Releases
+### Linux
 
-预编译二进制文件发布在 [GitHub Releases 页面](https://github.com/rainbend/sing-box-subscribe-cli/releases)。
-
-每个 tag release 会包含以下平台和架构：
-
-| 平台 | 架构 | 文件名格式 |
-| --- | --- | --- |
-| Linux | x86_64 | `sing-box-sub_<version>_linux_amd64` |
-| Linux | arm64 | `sing-box-sub_<version>_linux_arm64` |
-| macOS | Intel | `sing-box-sub_<version>_macos_amd64` |
-| macOS | Apple Silicon | `sing-box-sub_<version>_macos_arm64` |
-| Windows | x86_64 | `sing-box-sub_<version>_windows_amd64.exe` |
-| Windows | arm64 | `sing-box-sub_<version>_windows_arm64.exe` |
-
-在 Linux 或 macOS 上，下载后赋予执行权限并移动到 `PATH` 中：
+安装最新版本：
 
 ```bash
-chmod +x sing-box-sub_v0.1.0_linux_amd64
-sudo mv sing-box-sub_v0.1.0_linux_amd64 /usr/local/bin/sing-box-sub
+curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | bash
 ```
 
-在 Windows 上，下载匹配的 `.exe` 文件，可以重命名为 `sing-box-sub.exe`，并放到 `PATH` 包含的目录。
+安装脚本支持 `linux/amd64` 和 `linux/arm64`。默认安装到 `/usr/local/bin/sing-box-sub`，必要时会请求 `sudo`。
 
-检查当前版本：
+安装到其他目录：
 
 ```bash
-sing-box-sub version
+curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | INSTALL_DIR="$HOME/.local/bin" bash
 ```
 
-release 构建会输出它对应的 Git tag。
+安装指定版本：
 
-## 容器镜像
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | VERSION=v1.0.0 bash
+```
 
-容器镜像发布到 GitHub Packages：
+### Windows
+
+从 [GitHub Releases 页面](https://github.com/rainbend/sing-box-subscribe-cli/releases) 下载匹配的 `.exe` 文件，可以重命名为 `sing-box-sub.exe`，并放到 `PATH` 包含的目录。
+
+检查安装结果：
+
+```powershell
+sing-box-sub.exe version
+```
+
+### 容器
+
+从 GitHub Packages 拉取镜像：
 
 ```bash
 docker pull ghcr.io/rainbend/sing-box-subscribe-cli:latest
-docker pull ghcr.io/rainbend/sing-box-subscribe-cli:v0.1.0
+docker pull ghcr.io/rainbend/sing-box-subscribe-cli:v1.0.0
 ```
 
-镜像支持 `linux/amd64` 和 `linux/arm64`。
-
-把当前目录挂载到容器的 `/work` 后运行 CLI：
+把当前目录挂载为容器内的 `/work` 后运行：
 
 ```bash
 docker run --rm \
@@ -95,50 +107,11 @@ docker run --rm \
   ./subscription.yaml --out config.json
 ```
 
-从源码构建本地镜像：
-
-```bash
-docker build \
-  --build-arg VERSION=dev \
-  -t sing-box-subscribe-cli:dev .
-```
-
-## 从源码构建
-
-要求：
-
-- Go 1.24 或更新版本。
-- `make`，可选但推荐。
-
-克隆并构建：
-
-```bash
-git clone https://github.com/rainbend/sing-box-subscribe-cli.git
-cd sing-box-subscribe-cli
-make build
-```
-
-二进制文件会输出到：
-
-```bash
-./bin/sing-box-sub
-```
-
-也可以直接用 Go 构建：
-
-```bash
-go build -o ./bin/sing-box-sub ./cmd/sing-box-subscribe-cli
-```
-
-运行测试：
-
-```bash
-go test ./...
-```
+镜像支持 `linux/amd64` 和 `linux/arm64`。
 
 ## 使用方式
 
-从订阅 URL 生成 `config.json`：
+从订阅 URL 生成配置：
 
 ```bash
 sing-box-sub \
@@ -146,7 +119,7 @@ sing-box-sub \
   --out config.json
 ```
 
-订阅来源也可以通过 `--url` 传入：
+也可以用 `--url` 传入订阅来源：
 
 ```bash
 sing-box-sub \
@@ -160,12 +133,6 @@ sing-box-sub \
 sing-box-sub ./subscription.yaml --out config.json
 ```
 
-只输出生成的 outbounds，不合并模板：
-
-```bash
-sing-box-sub ./subscription.yaml --only-nodes --out nodes.json
-```
-
 使用其他内置模板：
 
 ```bash
@@ -174,7 +141,7 @@ sing-box-sub ./subscription.yaml \
   --out config.json
 ```
 
-使用模板文件或模板 URL：
+使用自己的模板文件：
 
 ```bash
 sing-box-sub ./subscription.yaml \
@@ -182,7 +149,13 @@ sing-box-sub ./subscription.yaml \
   --out config.json
 ```
 
-过滤并重命名生成的节点：
+只输出生成的 outbounds：
+
+```bash
+sing-box-sub ./subscription.yaml --only-nodes --out nodes.json
+```
+
+过滤或重命名生成的节点：
 
 ```bash
 sing-box-sub ./subscription.yaml \
@@ -192,14 +165,7 @@ sing-box-sub ./subscription.yaml \
   --out config.json
 ```
 
-如果环境里有对应工具，可以校验生成结果：
-
-```bash
-jq empty config.json
-sing-box check -c config.json
-```
-
-## 内置模板
+## 模板
 
 列出内置模板：
 
@@ -207,7 +173,7 @@ sing-box check -c config.json
 sing-box-sub list
 ```
 
-当前模板：
+当前内置模板：
 
 - `config_template_groups_rule_set_tun.json`
 - `config_template_groups_rule_set_tun_fakeip.json`
@@ -215,13 +181,11 @@ sing-box-sub list
 - `sb-config-1.12.json`
 - `sb-config-1.14.json`
 
-默认模板是：
+默认模板是 `sb-config-1.14.json`。
 
-```text
-sb-config-1.14.json
-```
+当 `--template` 是内置模板名时，会优先使用打包进二进制的模板。也支持 `./template.json`、`/path/to/template.json` 这类路径，以及 HTTP/HTTPS 模板 URL。
 
-当 `--template` 设置为内置模板名时，会优先使用打包进二进制的模板。也支持显式路径，例如 `./template.json`、`/path/to/template.json`，以及 HTTP/HTTPS URL。
+内置模板和规则组织参考了 [Toperlock/sing-box-subscribe](https://github.com/Toperlock/sing-box-subscribe)。
 
 ## 命令参考
 
@@ -237,33 +201,62 @@ sing-box-sub version
 | --- | --- | --- |
 | `--url` | 空 | 订阅 URL 或本地订阅文件。 |
 | `--template` | `sb-config-1.14.json` | 模板名、模板路径或模板 URL。 |
-| `--out` | `config.json` | 输出配置路径；使用 `-` 输出到 stdout。 |
+| `--out` | `config.json` | 输出文件路径，使用 `-` 输出到 stdout。 |
 | `--tag` | `tag_1` | 订阅组 tag。 |
 | `--ua` | `clashmeta` | 请求订阅和模板时使用的 User-Agent。 |
 | `--prefix` | 空 | 添加到生成 outbound tag 前面的前缀。 |
-| `--exclude-protocol` | `ssr` | 跳过的协议，多个值用逗号分隔。 |
-| `--exclude-node-name` | 空 | 按节点 tag 子串过滤，支持逗号或竖线分隔。 |
-| `--only-nodes` | `false` | 只写出生成的 outbounds，不合并模板。 |
+| `--exclude-protocol` | `ssr` | 要跳过的协议，多个值用逗号分隔。 |
+| `--exclude-node-name` | 空 | 要跳过的节点 tag 子串，支持逗号或 `|` 分隔。 |
+| `--only-nodes` | `false` | 只写出生成的 outbounds。 |
 | `--timeout` | `60s` | HTTP 请求超时时间。 |
 
-## 发布流程
+## 从源码构建
+
+要求：
+
+- Go 1.24 或更新版本
+- `make`，可选
+
+构建：
+
+```bash
+git clone https://github.com/rainbend/sing-box-subscribe-cli.git
+cd sing-box-subscribe-cli
+make build
+```
+
+二进制文件会输出到 `./bin/sing-box-sub`。
+
+运行测试：
+
+```bash
+go test ./...
+```
+
+构建本地容器镜像：
+
+```bash
+docker build \
+  --build-arg VERSION=dev \
+  -t sing-box-subscribe-cli:dev .
+```
+
+## 发布
 
 维护者通过推送 Git tag 发布版本：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-release workflow 会运行测试，交叉编译 Linux、macOS 和 Windows 的 `amd64`、`arm64` 二进制文件，把 tag 注入 `sing-box-sub version`，并上传到 GitHub Releases。
+release workflow 会运行测试，构建 Linux、macOS 和 Windows 的 `amd64`、`arm64` 二进制文件，把 tag 注入 `sing-box-sub version`，并上传到 GitHub Releases。
 
-container workflow 会构建多架构镜像并推送到 GitHub Packages。tag 会发布 `<version>` 和 `latest`；推送到 `main` 会发布 `main` 和 `sha-...` tag。
+容器镜像会发布到 GitHub Packages。版本 tag 会发布 `<version>` 和 `latest`；推送到 `main` 会发布 `main` 和 `sha-...` tag。
 
-合并请求和推送到 `main` 会运行 CI workflow，执行测试并确认同一套目标矩阵可以正常编译。
+## 隐私
 
-## 隐私和 fixture
-
-订阅 URL 通常包含私有 token。不要把真实订阅 URL、token 或节点内容提交到 issue、文档、测试或 fixture。复现问题时请使用脱敏示例或本地 fixture。
+订阅 URL 通常包含私有 token。请不要在 issue、文档、测试或 fixture 中分享真实订阅 URL、token 或节点内容。复现问题时请使用脱敏示例或本地 fixture。
 
 ## License
 
