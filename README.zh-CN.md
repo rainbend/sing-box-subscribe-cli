@@ -29,6 +29,22 @@
 
 ## 下载
 
+### macOS Homebrew
+
+通过 Homebrew tap 安装预编译 macOS 二进制：
+
+```bash
+brew install rainbend/tap/sing-box-subscribe-cli
+```
+
+安装后的命令是：
+
+```bash
+sing-box-sub version
+```
+
+### GitHub Releases
+
 预编译二进制文件发布在 [GitHub Releases 页面](https://github.com/rainbend/sing-box-subscribe-cli/releases)。
 
 每个 tag release 会包含以下平台和架构：

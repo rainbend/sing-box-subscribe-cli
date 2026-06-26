@@ -29,6 +29,22 @@ This project is intentionally not a full web service. It only provides the CLI p
 
 ## Download
 
+### Homebrew on macOS
+
+Install the prebuilt macOS binary from the Homebrew tap:
+
+```bash
+brew install rainbend/tap/sing-box-subscribe-cli
+```
+
+The installed command is:
+
+```bash
+sing-box-sub version
+```
+
+### GitHub Releases
+
 Prebuilt binaries are published on the [GitHub Releases page](https://github.com/rainbend/sing-box-subscribe-cli/releases).
 
 Each tagged release includes binaries for:
