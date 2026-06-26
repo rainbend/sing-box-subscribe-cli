@@ -61,7 +61,7 @@ func nodesFromDocument(doc any, excluded map[string]struct{}) ([]outbound, []str
 				warnings = append(warnings, "skip non-object proxy")
 				continue
 			}
-			node, err := clashProxyToOutbound(proxy, excluded)
+			outbounds, err := clashProxyToOutbounds(proxy, excluded)
 			if err != nil {
 				name := stringValue(proxy, "name")
 				if name == "" {
@@ -70,7 +70,7 @@ func nodesFromDocument(doc any, excluded map[string]struct{}) ([]outbound, []str
 				warnings = append(warnings, fmt.Sprintf("skip %s: %v", name, err))
 				continue
 			}
-			nodes = append(nodes, node)
+			nodes = append(nodes, outbounds...)
 		}
 		return nodes, warnings, nil
 	}
@@ -114,12 +114,12 @@ func parseLines(text string, excluded map[string]struct{}) ([]outbound, []string
 		if _, skip := excluded[proto]; skip {
 			continue
 		}
-		node, err := parseURI(line, proto)
+		outbounds, err := parseURI(line, proto)
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("skip %s URI: %v", proto, err))
 			continue
 		}
-		nodes = append(nodes, node)
+		nodes = append(nodes, outbounds...)
 	}
 	if len(nodes) == 0 && len(warnings) == 0 {
 		return nil, nil, fmt.Errorf("no recognizable subscription lines found")

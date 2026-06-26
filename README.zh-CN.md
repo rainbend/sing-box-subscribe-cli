@@ -13,7 +13,7 @@
 
 - 从 HTTP/HTTPS URL 或本地文件读取订阅。
 - 解析常见 Clash YAML 订阅中的 `proxies` 列表。
-- 将 Clash `vmess` 和 `hysteria2` 节点转换为 sing-box outbounds。
+- 将 Clash `vmess`、`vless`、`trojan`、`ss`、`ssr`、`hysteria`、`hysteria2`、`tuic`、`wireguard`、`socks5`、`http` 和 `anytls` 节点转换为 sing-box outbounds。
 - 复用订阅来源中已有的 sing-box `outbounds`。
 - 将生成的节点合并到内置 sing-box JSON 模板。
 - 展开 selector 和 urltest outbound 列表中的 `{all}`。
