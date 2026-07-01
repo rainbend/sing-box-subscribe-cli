@@ -79,6 +79,30 @@ curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/mai
 curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | VERSION=v1.0.0 bash
 ```
 
+如果希望在 sing-box 启动前自动重新生成配置，可以在 systemd unit 中使用 `ExecStartPre`：
+
+```ini
+[Unit]
+Description=sing-box service
+Documentation=https://sing-box.sagernet.org
+After=network.target nss-lookup.target network-online.target
+
+[Service]
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
+ExecStartPre=/usr/local/bin/sing-box-sub --out /etc/sing-box/config.json 'https://example.com/api/v1/client/subscribe?token=REDACTED'
+ExecStart=/usr/bin/sing-box -D /var/lib/sing-box -C /etc/sing-box run
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=10s
+LimitNOFILE=infinity
+
+[Install]
+WantedBy=multi-user.target
+```
+
+如果 `ExecStartPre` 执行失败，systemd 会在启动 sing-box 前停止本次启动流程。请确认 `/usr/local/bin/sing-box-sub` 已存在，服务有权限写入 `/etc/sing-box/config.json`，并且服务启动时可以访问订阅 URL。
+
 ### Windows
 
 从 [GitHub Releases 页面](https://github.com/rainbend/sing-box-subscribe-cli/releases) 下载匹配的 `.exe` 文件，可以重命名为 `sing-box-sub.exe`，并放到 `PATH` 包含的目录。

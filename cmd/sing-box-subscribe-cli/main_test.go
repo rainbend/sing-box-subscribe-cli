@@ -76,6 +76,9 @@ proxies:
 	if !strings.Contains(stderr, "generated 1 nodes") {
 		t.Fatalf("stderr missing generated count:\n%s", stderr)
 	}
+	if !strings.Contains(stderr, "config path: "+outputPath) {
+		t.Fatalf("stderr missing output path:\n%s", stderr)
+	}
 	output, err := os.ReadFile(outputPath)
 	if err != nil {
 		t.Fatal(err)

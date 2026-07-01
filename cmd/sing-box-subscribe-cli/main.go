@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/rainbend/sing-box-subscribe-cli/internal/subconv"
@@ -112,10 +113,23 @@ func runGenerate(cmd *cobra.Command, opts subconv.Options, timeout time.Duration
 		fmt.Fprintf(stderr, " with %d warnings", len(result.Warnings))
 	}
 	fmt.Fprintln(stderr)
+	if opts.Output == "-" {
+		fmt.Fprintln(stderr, "config output: stdout")
+	} else {
+		fmt.Fprintf(stderr, "config path: %s\n", displayPath(opts.Output))
+	}
 	for _, warning := range result.Warnings {
 		fmt.Fprintf(stderr, "warning: %s\n", warning)
 	}
 	return nil
+}
+
+func displayPath(path string) string {
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return absolute
 }
 
 func writeJSON(path string, value any) error {
