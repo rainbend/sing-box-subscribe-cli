@@ -1,0 +1,35 @@
+version: 2
+
+project_name: sing-box-subscribe-cli
+
+builds:
+  - id: sing-box-sub
+    main: ./cmd/sing-box-subscribe-cli
+    binary: sing-box-sub
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{ .Tag }}
+
+archives:
+  - id: default
+    ids:
+      - sing-box-sub
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: 'sing-box-sub_{{ .Tag }}_{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}'
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256

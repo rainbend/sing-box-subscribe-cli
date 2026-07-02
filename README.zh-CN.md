@@ -105,7 +105,7 @@ WantedBy=multi-user.target
 
 ### Windows
 
-从 [GitHub Releases 页面](https://github.com/rainbend/sing-box-subscribe-cli/releases) 下载匹配的 `.exe` 文件，可以重命名为 `sing-box-sub.exe`，并放到 `PATH` 包含的目录。
+从 [GitHub Releases 页面](https://github.com/rainbend/sing-box-subscribe-cli/releases) 下载匹配的 Windows `.zip` 文件，解压出 `sing-box-sub.exe`，并放到 `PATH` 包含的目录。
 
 检查安装结果：
 
@@ -274,7 +274,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-release workflow 会运行测试，构建 Linux、macOS 和 Windows 的 `amd64`、`arm64` 二进制文件，把 tag 注入 `sing-box-sub version`，并上传到 GitHub Releases。
+release workflow 会运行测试，通过 GoReleaser 构建 Linux、macOS 和 Windows 的 `amd64`、`arm64` 归档文件，把 tag 注入 `sing-box-sub version`，将产物和 `checksums.txt` 上传到 GitHub Releases，并更新 Homebrew tap formula。
 
 容器镜像会发布到 GitHub Packages。版本 tag 会发布 `<version>` 和 `latest`；推送到 `main` 会发布 `main` 和 `sha-...` tag。
 

@@ -24,82 +24,109 @@ jobs:
       - name: Test
         run: go test ./...
 
-  build:
-    name: Build release binaries
+  release:
+    name: Run GoReleaser
     needs: test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            os_name: linux
-            ext: ""
-          - goos: linux
-            goarch: arm64
-            os_name: linux
-            ext: ""
-          - goos: darwin
-            goarch: amd64
-            os_name: macos
-            ext: ""
-          - goos: darwin
-            goarch: arm64
-            os_name: macos
-            ext: ""
-          - goos: windows
-            goarch: amd64
-            os_name: windows
-            ext: ".exe"
-          - goos: windows
-            goarch: arm64
-            os_name: windows
-            ext: ".exe"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
-      - name: Build
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: "0"
-          VERSION: ${{ github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate Homebrew checksums
+        id: brew
         run: |
-          mkdir -p dist
-          output="dist/sing-box-sub_${VERSION}_${{ matrix.os_name }}_${GOARCH}${{ matrix.ext }}"
-          go build \
-            -trimpath \
-            -ldflags "-s -w -X main.version=${VERSION}" \
-            -o "${output}" \
-            ./cmd/sing-box-subscribe-cli
+          version="${GITHUB_REF_NAME#v}"
+          tag="${GITHUB_REF_NAME}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "macos_arm64_sha=$(sha256sum "dist/sing-box-sub_${tag}_macos_arm64.tar.gz" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "macos_amd64_sha=$(sha256sum "dist/sing-box-sub_${tag}_macos_amd64.tar.gz" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64_sha=$(sha256sum "dist/sing-box-sub_${tag}_linux_arm64.tar.gz" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "linux_amd64_sha=$(sha256sum "dist/sing-box-sub_${tag}_linux_amd64.tar.gz" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
         with:
-          name: sing-box-sub_${{ github.ref_name }}_${{ matrix.os_name }}_${{ matrix.goarch }}
-          path: dist/*
-          if-no-files-found: error
+          repository: rainbend/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
 
-  release:
-    name: Publish GitHub release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
+      - name: Update Homebrew formula
+        env:
+          FORMULA_PATH: homebrew-tap/Formula/sing-box-subscribe-cli.rb
+          TAG: ${{ steps.brew.outputs.tag }}
+          VERSION: ${{ steps.brew.outputs.version }}
+          MACOS_ARM64_SHA: ${{ steps.brew.outputs.macos_arm64_sha }}
+          MACOS_AMD64_SHA: ${{ steps.brew.outputs.macos_amd64_sha }}
+          LINUX_ARM64_SHA: ${{ steps.brew.outputs.linux_arm64_sha }}
+          LINUX_AMD64_SHA: ${{ steps.brew.outputs.linux_amd64_sha }}
+        run: |
+          mkdir -p "$(dirname "$FORMULA_PATH")"
+          cat > "$FORMULA_PATH" <<FORMULA
+          class SingBoxSubscribeCli < Formula
+            desc "Generate sing-box configs from subscriptions and JSON templates"
+            homepage "https://github.com/rainbend/sing-box-subscribe-cli"
+            version "${VERSION}"
+            license "Apache-2.0"
 
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
+            on_macos do
+              on_arm do
+                url "https://github.com/rainbend/sing-box-subscribe-cli/releases/download/${TAG}/sing-box-sub_${TAG}_macos_arm64.tar.gz"
+                sha256 "${MACOS_ARM64_SHA}"
+              end
+
+              on_intel do
+                url "https://github.com/rainbend/sing-box-subscribe-cli/releases/download/${TAG}/sing-box-sub_${TAG}_macos_amd64.tar.gz"
+                sha256 "${MACOS_AMD64_SHA}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+                url "https://github.com/rainbend/sing-box-subscribe-cli/releases/download/${TAG}/sing-box-sub_${TAG}_linux_arm64.tar.gz"
+                sha256 "${LINUX_ARM64_SHA}"
+              end
+
+              if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
+                url "https://github.com/rainbend/sing-box-subscribe-cli/releases/download/${TAG}/sing-box-sub_${TAG}_linux_amd64.tar.gz"
+                sha256 "${LINUX_AMD64_SHA}"
+              end
+            end
+
+            def install
+              bin.install "sing-box-sub"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/sing-box-sub version")
+              assert_match "sb-config-1.14.json", shell_output("#{bin}/sing-box-sub list")
+            end
+          end
+          FORMULA
+          ruby -c "$FORMULA_PATH"
+
+      - name: Commit Homebrew formula
+        working-directory: homebrew-tap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          [ -n "$(git status --porcelain -- Formula/sing-box-subscribe-cli.rb)" ] || exit 0
+          git add Formula/sing-box-subscribe-cli.rb
+          git commit -m "Update sing-box-subscribe-cli to ${GITHUB_REF_NAME}"
+          git push

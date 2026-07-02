@@ -105,7 +105,7 @@ If `ExecStartPre` fails, systemd stops the startup before launching sing-box. Ma
 
 ### Windows
 
-Download the matching `.exe` from the [GitHub Releases page](https://github.com/rainbend/sing-box-subscribe-cli/releases), rename it to `sing-box-sub.exe` if you like, and place it in a directory listed in `PATH`.
+Download the matching Windows `.zip` from the [GitHub Releases page](https://github.com/rainbend/sing-box-subscribe-cli/releases), extract `sing-box-sub.exe`, and place it in a directory listed in `PATH`.
 
 Check the installed command:
 
@@ -274,7 +274,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-The release workflow runs tests, builds Linux, macOS, and Windows binaries for `amd64` and `arm64`, injects the tag into `sing-box-sub version`, and uploads the binaries to GitHub Releases.
+The release workflow runs tests, uses GoReleaser to build Linux, macOS, and Windows archives for `amd64` and `arm64`, injects the tag into `sing-box-sub version`, uploads the artifacts and `checksums.txt` to GitHub Releases, and updates the Homebrew tap formula.
 
 Container images are published to GitHub Packages. Version tags publish `<version>` and `latest`; pushes to `main` publish `main` and a `sha-...` tag.
 
