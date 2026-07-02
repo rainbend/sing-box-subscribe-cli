@@ -79,6 +79,30 @@ Install a specific version:
 curl -fsSL https://raw.githubusercontent.com/rainbend/sing-box-subscribe-cli/main/install.sh | VERSION=v1.0.0 bash
 ```
 
+Use `ExecStartPre` in a systemd unit when you want to regenerate the sing-box config before starting sing-box:
+
+```ini
+[Unit]
+Description=sing-box service
+Documentation=https://sing-box.sagernet.org
+After=network.target nss-lookup.target network-online.target
+
+[Service]
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
+ExecStartPre=/usr/local/bin/sing-box-sub --out /etc/sing-box/config.json 'https://example.com/api/v1/client/subscribe?token=REDACTED'
+ExecStart=/usr/bin/sing-box -D /var/lib/sing-box -C /etc/sing-box run
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=10s
+LimitNOFILE=infinity
+
+[Install]
+WantedBy=multi-user.target
+```
+
+If `ExecStartPre` fails, systemd stops the startup before launching sing-box. Make sure `/usr/local/bin/sing-box-sub` exists, the service can write `/etc/sing-box/config.json`, and the subscription URL is reachable when the service starts.
+
 ### Windows
 
 Download the matching `.exe` from the [GitHub Releases page](https://github.com/rainbend/sing-box-subscribe-cli/releases), rename it to `sing-box-sub.exe` if you like, and place it in a directory listed in `PATH`.
