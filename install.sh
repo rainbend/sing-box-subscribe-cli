@@ -56,18 +56,33 @@ case "$version" in
   *) version="v${version}" ;;
 esac
 
-asset="${release_binary}_${version}_linux_${arch}"
-url="https://github.com/${repo}/releases/download/${version}/${asset}"
+archive_asset="${release_binary}_${version}_linux_${arch}.tar.gz"
+raw_asset="${release_binary}_${version}_linux_${arch}"
+archive_url="https://github.com/${repo}/releases/download/${version}/${archive_asset}"
+raw_url="https://github.com/${repo}/releases/download/${version}/${raw_asset}"
 tmp_dir="$(mktemp -d)"
-tmp_file="${tmp_dir}/${asset}"
+archive_file="${tmp_dir}/${archive_asset}"
+tmp_file="${tmp_dir}/${release_binary}"
 
 cleanup() {
   rm -rf "$tmp_dir"
 }
 trap cleanup EXIT INT TERM
 
-echo "Downloading ${asset}..."
-curl -fL "$url" -o "$tmp_file"
+echo "Downloading ${archive_asset}..."
+if curl -fsSL "$archive_url" -o "$archive_file"; then
+  need_cmd tar
+  tar -xzf "$archive_file" -C "$tmp_dir"
+else
+  echo "Archive not found, falling back to ${raw_asset}..."
+  curl -fL "$raw_url" -o "$tmp_file"
+fi
+
+if [ ! -f "$tmp_file" ]; then
+  echo "error: release asset did not contain ${release_binary}" >&2
+  exit 1
+fi
+
 chmod 0755 "$tmp_file"
 
 if [ ! -d "$install_dir" ]; then
